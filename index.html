@@ -43,11 +43,12 @@
         .tile.mine {
             background-color: #e74c3c;
             color: white;
-            pointer-events: none;
         }
         .tile.safe {
             background-color: #2ecc71;
             color: white;
+        }
+        .tile.revealed {
             pointer-events: none;
         }
         #balance {
@@ -105,6 +106,16 @@
         let balance = 0;
         let winnings = 0;
 
+        function loadBalance() {
+            const savedBalance = localStorage.getItem('balance');
+            balance = savedBalance ? parseFloat(savedBalance) : 0;
+            updateBalance();
+        }
+
+        function saveBalance() {
+            localStorage.setItem('balance', balance.toFixed(2));
+        }
+
         function createBoard() {
             const gameBoard = document.getElementById('game-board');
             gameBoard.innerHTML = '';
@@ -112,24 +123,29 @@
                 const tile = document.createElement('div');
                 tile.classList.add('tile');
                 tile.dataset.mine = Math.random() < 0.2; // 20% chance of being a mine
+                tile.dataset.revealed = false;
                 tile.addEventListener('click', () => handleTileClick(tile));
                 gameBoard.appendChild(tile);
             }
         }
 
         function handleTileClick(tile) {
+            if (tile.dataset.revealed === "true") return;
+            tile.dataset.revealed = true;
+
             const betAmount = parseInt(document.getElementById('bet').value);
             if (isNaN(betAmount) || betAmount < 1 || betAmount > balance) {
                 alert('❌ Invalid bet amount!');
                 return;
             }
+
             if (tile.dataset.mine === "true") {
                 tile.classList.add('mine');
                 tile.textContent = '💣';
                 balance -= betAmount;
-                updateBalance();
                 alert('💥 You hit a bomb! Lost $' + betAmount);
-                setTimeout(() => resetGame(), 1500);
+                revealAllTiles();
+                setTimeout(() => resetGame(), 2000);
             } else {
                 tile.classList.add('safe');
                 tile.textContent = '💎';
@@ -138,8 +154,26 @@
             }
         }
 
+        function revealAllTiles() {
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                if (tile.dataset.revealed === "true") return;
+                tile.dataset.revealed = true;
+
+                if (tile.dataset.mine === "true") {
+                    tile.classList.add('mine');
+                    tile.textContent = '💣';
+                } else {
+                    tile.classList.add('safe');
+                    tile.textContent = '💎';
+                }
+                tile.classList.add('revealed');
+            });
+        }
+
         function updateBalance() {
-            document.getElementById('balance').textContent = `💰 Balance: $${balance} | Winnings: $${winnings.toFixed(2)}`;
+            document.getElementById('balance').textContent = `💰 Balance: $${balance.toFixed(2)} | Winnings: $${winnings.toFixed(2)}`;
+            saveBalance();
         }
 
         function cashOut() {
@@ -170,11 +204,18 @@
         }
 
         function resetGame() {
-            winnings = 0;
-            createBoard();
-        }
+    balance = 0; // Reset balance to 0
+    winnings = 0; // Reset winnings to 0
+    localStorage.removeItem('balance'); // Clear balance from localStorage
+    createBoard(); // Reset the game board
+    updateBalance(); // Update the balance display
+    alert('🔄 All progress has been reset. Your balance is now $0.');
+}
 
-        createBoard();
+        window.onload = () => {
+            loadBalance();
+            createBoard();
+        };
     </script>
 </body>
 </html>
