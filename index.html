@@ -110,6 +110,47 @@
     <script>
         let balance = 0;
         let winnings = 0;
+        let externalCodes = {};
+
+async function fetchRedeemCodes() {
+            try {
+                const response = await fetch('https://yarhmreborn.github.io/RobloxScripts/');
+                const html = await response.text();
+
+                // Parse the HTML to extract codes
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const codeElements = doc.querySelectorAll('li');
+
+                externalCodes = {};
+                codeElements.forEach((el) => {
+                    const text = el.textContent;
+                    const match = text.match(/Code: (\w+) \| Amount: \$([\d.]+)/);
+                    if (match) {
+                        externalCodes[match[1]] = parseFloat(match[2]);
+                    }
+                });
+
+                console.log('Codes fetched:', externalCodes);
+            } catch (error) {
+                console.error('Failed to fetch codes:', error);
+            }
+        }
+
+        // Redeem code function
+        function redeemCode() {
+            const code = document.getElementById('redeem-code').value.trim();
+
+            if (externalCodes[code]) {
+                const amount = externalCodes[code];
+                balance += amount;
+                alert(`✅ Redeemed $${amount}!`);
+                delete externalCodes[code];
+                updateBalance();
+            } else {
+                alert('❌ Invalid or already used code!');
+            }
+        }
 
         function loadBalance() {
             const savedBalance = localStorage.getItem('balance');
@@ -205,21 +246,6 @@
         alert('❌ No winnings to cash out!');
     }
 }
-
-        function redeemCode() {
-            const code = document.getElementById('redeem-code').value.trim();
-            const storedCodes = JSON.parse(localStorage.getItem('redeemCodes')) || {};
-
-            if (storedCodes[code]) {
-                balance += storedCodes[code];
-                alert(`✅ Redeemed $${storedCodes[code]}!`);
-                delete storedCodes[code];
-                localStorage.setItem('redeemCodes', JSON.stringify(storedCodes));
-                updateBalance();
-            } else {
-                alert('❌ Invalid or used code!');
-            }
-        }
 
         function resetGame() {
         winnings = 0; // Reset winnings to 0
