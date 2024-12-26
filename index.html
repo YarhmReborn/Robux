@@ -85,6 +85,10 @@
             background-color: #ffcc00;
             color: black;
         }
+        #deleteall {
+            background-color: #ff0000;
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -102,6 +106,7 @@
     <div class="game-board" id="game-board"></div>
     <button id="cashout" onclick="cashOut()">💵 Cash Out</button>
     <button onclick="resetGame()" id="reset">🔄 Reset Game</button>
+    <button id="deleteall" onclick="deleteall()">❌ Delete All</button>
     <script>
         let balance = 0;
         let winnings = 0;
@@ -130,29 +135,34 @@
         }
 
         function handleTileClick(tile) {
-            if (tile.dataset.revealed === "true") return;
-            tile.dataset.revealed = true;
+    if (tile.dataset.revealed === "true") return;
+    tile.dataset.revealed = true;
 
-            const betAmount = parseInt(document.getElementById('bet').value);
-            if (isNaN(betAmount) || betAmount < 1 || betAmount > balance) {
-                alert('❌ Invalid bet amount!');
-                return;
-            }
+    const betAmount = parseInt(document.getElementById('bet').value);
+    if (isNaN(betAmount) || betAmount < 1 || betAmount > balance) {
+        alert('❌ Invalid bet amount!');
+        return;
+    }
 
-            if (tile.dataset.mine === "true") {
-                tile.classList.add('mine');
-                tile.textContent = '💣';
-                balance -= betAmount;
-                alert('💥 You hit a bomb! Lost $' + betAmount);
-                revealAllTiles();
-                setTimeout(() => resetGame(), 2000);
-            } else {
-                tile.classList.add('safe');
-                tile.textContent = '💎';
-                winnings += betAmount * 1.5;
-                updateBalance();
-            }
-        }
+    // Adjust bomb probability based on the bet amount
+    const bombProbability = Math.min(0.2 + betAmount / 1000, 0.8); // The probability increases with the bet, maxing out at 80%
+    tile.dataset.mine = Math.random() < bombProbability; // If random number is less than the probability, it's a bomb
+
+    if (tile.dataset.mine === "true") {
+        tile.classList.add('mine');
+        tile.textContent = '💣';
+        balance -= betAmount;
+        alert('💥 You hit a bomb! Lost $' + betAmount);
+        document.getElementById('cashout').disabled = true; // Disable Cash Out button
+        revealAllTiles();
+        setTimeout(() => resetGame(), 2000);
+    } else {
+        tile.classList.add('safe');
+        tile.textContent = '💎';
+        winnings += betAmount * 1.5;
+        updateBalance();
+    }
+}
 
         function revealAllTiles() {
             const tiles = document.querySelectorAll('.tile');
@@ -177,16 +187,24 @@
         }
 
         function cashOut() {
-            if (winnings > 0) {
-                balance += winnings;
-                winnings = 0;
-                alert('💸 Cashed out winnings!');
-                updateBalance();
-                createBoard();
-            } else {
-                alert('❌ No winnings to cash out!');
-            }
-        }
+    const tiles = document.querySelectorAll('.tile');
+    const unrevealedTiles = Array.from(tiles).some(tile => tile.dataset.revealed === "false");
+
+    if (!unrevealedTiles) {
+        alert('❌ You cannot cash out after revealing all tiles!');
+        return;
+    }
+
+    if (winnings > 0) {
+        balance += winnings;
+        winnings = 0;
+        alert('💸 Cashed out winnings!');
+        updateBalance();
+        createBoard();
+    } else {
+        alert('❌ No winnings to cash out!');
+    }
+}
 
         function redeemCode() {
             const code = document.getElementById('redeem-code').value.trim();
@@ -204,13 +222,16 @@
         }
 
         function resetGame() {
-    balance = 0; // Reset balance to 0
-    winnings = 0; // Reset winnings to 0
-    localStorage.removeItem('balance'); // Clear balance from localStorage
-    createBoard(); // Reset the game board
-    updateBalance(); // Update the balance display
-    alert('🔄 All progress has been reset. Your balance is now $0.');
-}
+        winnings = 0; // Reset winnings to 0
+        updateBalance(); // Update the balance display
+        createBoard(); // Reset the game board
+        document.getElementById('cashout').disabled = false; // Re-enable Cash Out button
+    }
+    
+    function deleteall() {
+        balance = 0; // Reset winnings to 0
+        updateBalance(); // Update the balance display
+    }
 
         window.onload = () => {
             loadBalance();
